@@ -42,7 +42,7 @@ public class DeterministicAutomaton<T> {
 		}
 	}
 	
-	protected final void addState(IState s) throws NotDeterministInitialStateException {		
+	protected final void addState(State s) throws NotDeterministInitialStateException {		
 		if (!this.transitions.containsKey(s)) {
 			this.transitions.put(s, new HashMap<T, ITransition<T>>());
 			if (s.initial()) {

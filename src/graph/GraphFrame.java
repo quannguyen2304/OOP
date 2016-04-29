@@ -135,6 +135,17 @@ public class GraphFrame extends JFrame {
 				controller.saveFrame(GraphFrame.this.graphComponent);
 			}
 		});
+		
+		
+		// create menu change color
+		createMenuItem(menu, Constants.MENU_ITEM_CHANGECOLOR, new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				controller.changecolor(GraphFrame.this.graphComponent);
+			}
+		});
 
 		// Create menu item close
 		createMenuItem(menu, Constants.MENU_ITEM_CLOSE, new ActionListener() {

@@ -57,6 +57,8 @@ public class GraphComponent extends JComponent implements MouseInputListener,Key
 	private Point2D desPoint;
 	private Point2D sourcePoint;
 	
+	private Color colorState;
+	
 	//current button to draw state
 	private String currentButton = ""; 
 		
@@ -74,6 +76,8 @@ public class GraphComponent extends JComponent implements MouseInputListener,Key
 		addKeyListener(this);
 		
 		// Init variables
+		initGraphComponent();
+		
 		altPressed = false;
 		currently = -1;
 		currentButton = "";
@@ -82,17 +86,12 @@ public class GraphComponent extends JComponent implements MouseInputListener,Key
 		currentJoinPoint = -1;
 		desPoint = new Point2D.Float();
 		dx = 0;
-		dy = 0;
-		finalState = new ArrayList<Integer>();
-		initialState = 0;
-		listLine = new ArrayList<Edge>();		
-		listPoints = new ArrayList<Shape>();		
+		dy = 0;			
 		movableLinePoint = false;
 		movableJoinPoint = false;
 		spacePressed = false;
-		states = new ArrayList<State>();
 		tempEdge = new ArrayList<Shape>();
-		transitions = new ArrayList<Transition<String>>();	
+		colorState = Color.blue;
 	}
 	
 	@Override
@@ -147,7 +146,7 @@ public class GraphComponent extends JComponent implements MouseInputListener,Key
 			int internalRadius = p.getRadius();
 			int height = internalRadius*2, width = internalRadius*2;
 			
-			g2d.setColor(Color.BLUE);
+			g2d.setColor(this.colorState);
 			if(labelCount == initialState)
 				g2d.setColor(Color.RED);
 			if(finalState.contains(labelCount))
@@ -463,7 +462,7 @@ public class GraphComponent extends JComponent implements MouseInputListener,Key
 		if(e.isAltDown()){
 			altPressed = true;
 			if(e.getKeyCode() == KeyEvent.VK_SPACE)
-				tempEdge.add(new Shape("circle", desPoint, 5));
+				tempEdge.add(new Shape(Constants.CircleType, desPoint, 5));
 		}
 	}
 
@@ -488,7 +487,7 @@ public class GraphComponent extends JComponent implements MouseInputListener,Key
 	}
 	
 	public void setInitialState(){
-		if(currently > -1 && (initialState != currently)){
+		if(currently > -1 && (initialState != currently)){			
 			states.get(initialState).setInitial(false);
 			initialState = currently;
 			states.get(currently).setTerminal(true);
@@ -550,5 +549,26 @@ public class GraphComponent extends JComponent implements MouseInputListener,Key
 	
 	public ArrayList<Transition<String>> getArrayTransitions() {
 		return this.transitions;
+	}
+	
+	public void setTransitions(ArrayList<Transition<String>> transitions) {
+		this.transitions = transitions;
+	}
+	
+	public void initGraphComponent() {
+		this.initialState = 0;
+		this.finalState = new ArrayList<Integer>();
+		this.listLine = new ArrayList<Edge>();		
+		this.listPoints = new ArrayList<Shape>();	
+		this.states = new ArrayList<State>();
+		this.transitions = new ArrayList<>();
+	}
+	
+	public void setColorState(Color color) {
+		this.colorState = color;
+	}
+	
+	public Color getColorState() {
+		return this.colorState;
 	}
 }

@@ -13,5 +13,7 @@ public interface IGraphController {
 	
 	public void loadFrame(GraphComponent frame);
 	
-	public void run();	
+	public void run();
+	
+	public void changecolor(GraphComponent com);
 }
