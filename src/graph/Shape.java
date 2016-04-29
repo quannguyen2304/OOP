@@ -9,14 +9,6 @@ public class Shape {
 	private int radius;
 	private int dx, dy;
 
-	public int getDx() {
-		return dx;
-	}
-
-	public int getDy() {
-		return dy;
-	}
-
 	private boolean haveLine;
 	private boolean movable;
 	private int lineIndex;
@@ -132,5 +124,12 @@ public class Shape {
 	public Ellipse2D isCirclePointSelected() {
 		return new Ellipse2D.Double(point.getX() + dx - 5, point.getY() + dy - 5, 10, 10);
 	}
+	
+	public int getDx() {
+		return dx;
+	}
 
+	public int getDy() {
+		return dy;
+	}
 }

@@ -1,5 +1,6 @@
 package controller;
 
+import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
@@ -15,7 +16,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import core.IState;
 import core.State;
 import core.Transition;
 import graph.Edge;
@@ -25,6 +25,7 @@ import graph.Shape;
 public class XMLController implements IXMLController {
 
 	// Create xml content
+	@Override
 	public Document createXMLContent(GraphComponent com) {
 		DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
 		Document doc = null;
@@ -43,6 +44,9 @@ public class XMLController implements IXMLController {
 			// end point
 			createXMLContentForFinalStates(doc, rootElement, com.getFinalState());
 
+			// color
+			createElement(doc, "color", rootElement, Integer.toString(com.getColorState().getRGB()));
+
 			// edges elements
 			createXMLContentForEdges(doc, rootElement, com.getListLine());
 
@@ -51,9 +55,6 @@ public class XMLController implements IXMLController {
 
 			// states
 			createXMLContentForStates(doc, rootElement, com.getArrayStates());
-
-			// transaction
-			createXMLContentForTransition(doc, rootElement, com.getArrayTransitions());
 
 			return doc;
 		} catch (ParserConfigurationException e) {
@@ -65,14 +66,23 @@ public class XMLController implements IXMLController {
 	}
 
 	// Load xml to component
+	@Override
 	public GraphComponent loadXMLFile(GraphComponent com, File xmlContent) {
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder dBuilder;
+
+		// init component
+		com.initGraphComponent();
+
 		try {
 			dBuilder = dbFactory.newDocumentBuilder();
 			Document doc;
 			try {
 				doc = dBuilder.parse(xmlContent);
+
+				List<Edge> lstEdge = com.getListLine();
+				List<State> lstState = com.getArrayStates();
+				List<Transition<String>> lstTransition = new ArrayList<>();
 
 				// start point
 				com.setInitialState(doc.getElementsByTagName("startpoint").item(0).getTextContent());
@@ -80,18 +90,21 @@ public class XMLController implements IXMLController {
 				// end point
 				LoadXMLToListFinalPoint(doc, com.getFinalState());
 
+				// color
+				com.setColorState(
+						new Color(Integer.parseInt(doc.getElementsByTagName("color").item(0).getTextContent())));
+
 				// edges
-				LoadXMLToListEdge(doc, com.getListLine());
+				LoadXMLToListEdge(doc, lstEdge);
 
 				// shapes
 				LoadXMLToListShape(doc, com.getListPoints(), "shape");
 
 				// states
-				LoadXMLToListState(doc, com.getArrayStates());
+				LoadXMLToListState(doc, lstState);
 
 				// transitions
-				LoadXMLToArrayTransition(doc, com.getArrayTransitions());
-
+				com.setTransitions(LoadTransitionsFromEdges(lstEdge, lstTransition, lstState));
 			} catch (SAXException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -141,25 +154,28 @@ public class XMLController implements IXMLController {
 
 			// label attribute
 			createElement(doc, "label", edgeChild, edge.getLabel());
-			
+
 			// join point attribute
-			createXMLContentForShapes(doc, edgeChild, edge.getJoinPoint(), "jointpoint");			
+			createXMLContentForShapes(doc, edgeChild, edge.getJoinPoint(), "jointpoint");
 		}
 	}
 
 	// Create xml content for shapes
-	private void createXMLContentForShapes(Document doc, Element rootElement, List<Shape> lstShape, String currentNameNode) {
+	private void createXMLContentForShapes(Document doc, Element rootElement, List<Shape> lstShape,
+			String currentNameNode) {
 		Element shapesNode;
-		
-		if (currentNameNode == ""){
+		boolean createChild = false;
+
+		if (currentNameNode == "") {
 			shapesNode = createElement(doc, "shapes", rootElement);
+			createChild = true;
 		} else {
 			shapesNode = createElement(doc, currentNameNode, rootElement);
 		}
 
 		for (Shape shape : lstShape) {
 			// create child
-			Element shapeChild = createElement(doc, "shape", shapesNode);
+			Element shapeChild = createChild ? createElement(doc, "shape", shapesNode) : shapesNode;
 
 			// type element
 			createElement(doc, "type", shapeChild, shape.getType());
@@ -178,7 +194,7 @@ public class XMLController implements IXMLController {
 
 			// have line element
 			createElement(doc, "lineindex", shapeChild, shape.getLineIndex() + "");
-			
+
 			// line index element
 			createElement(doc, "haveline", shapeChild, shape.isHaveLine() + "");
 
@@ -199,27 +215,6 @@ public class XMLController implements IXMLController {
 
 			// terminal
 			createElement(doc, "terminal", stateChild, integer.getTerminal() + "");
-		}
-	}
-
-	// create xml content for transitions
-	private void createXMLContentForTransition(Document doc, Element rootElement,
-			ArrayList<Transition<String>> arrTransition) {
-		Element transitionsNode = createElement(doc, "transitions", rootElement);
-
-		for (Transition<String> transition : arrTransition) {
-			Element transitionChild = createElement(doc, "transition", transitionsNode);
-
-			// source
-			createElement(doc, "source", transitionChild,
-					transition.source().initial() + "," + transition.source().terminal());
-
-			// target
-			createElement(doc, "target", transitionChild,
-					transition.target().initial() + "," + transition.target().terminal());
-
-			// label
-			createElement(doc, "label", transitionChild, transition.label());
 		}
 	}
 
@@ -261,11 +256,11 @@ public class XMLController implements IXMLController {
 
 		for (int i = 0; i < nListEdges.getLength(); i++) {
 			NodeList nListEdgeElement = nListEdges.item(i).getChildNodes();
-			
+
 			// join point
-			ArrayList<Shape> jointPoint = new ArrayList<Shape>();			
-			LoadXMLToListShape(doc, jointPoint, "joinpoint");
-			
+			ArrayList<Shape> jointPoint = new ArrayList<Shape>();
+			AddShapeToList(nListEdgeElement.item(4).getChildNodes(), jointPoint, true);
+
 			lstEdge.add(new Edge(Integer.parseInt(nListEdgeElement.item(0).getTextContent()),
 					Integer.parseInt(nListEdgeElement.item(1).getTextContent()),
 					Boolean.valueOf(nListEdgeElement.item(2).getTextContent()),
@@ -276,20 +271,43 @@ public class XMLController implements IXMLController {
 	// load xml content to list shape
 	private void LoadXMLToListShape(Document doc, List<Shape> lstShape, String tagName) {
 		NodeList nListShapes = doc.getElementsByTagName(tagName);
+		AddShapeToList(nListShapes, lstShape, false);
+	}
 
-		for (int i = 0; i < nListShapes.getLength(); i++) {
-			NodeList nListShapeElement = nListShapes.item(i).getChildNodes();
-			String pointString = nListShapeElement.item(1).getTextContent();
-			Point2D point = new Point2D.Double(Double.parseDouble(pointString.split("-")[0]),
-					Double.parseDouble(pointString.split("-")[1]));
+	// add shape to list shape
+	private void AddShapeToList(NodeList nodesShapes, List<Shape> lstShape, boolean hasAddJointPoint) {
+		if (hasAddJointPoint) {
+			if (nodesShapes.getLength() > 0) {
+				String pointString = nodesShapes.item(1).getTextContent();
+				Point2D point = new Point2D.Double(Double.parseDouble(pointString.split("-")[0]),
+						Double.parseDouble(pointString.split("-")[1]));
 
-			lstShape.add(new Shape(nListShapeElement.item(0).getTextContent(), point,
-					Integer.parseInt(nListShapeElement.item(2).getTextContent()),
-					Integer.parseInt(nListShapeElement.item(3).getTextContent()),
-					Integer.parseInt(nListShapeElement.item(4).getTextContent()),
-					Integer.parseInt(nListShapeElement.item(5).getTextContent()),
-					Boolean.valueOf(nListShapeElement.item(6).getTextContent()),
-					Boolean.valueOf(nListShapeElement.item(7).getTextContent())));
+				lstShape.add(new Shape(nodesShapes.item(0).getTextContent(), point,
+						Integer.parseInt(nodesShapes.item(2).getTextContent()),
+						Integer.parseInt(nodesShapes.item(3).getTextContent()),
+						Integer.parseInt(nodesShapes.item(4).getTextContent()),
+						Integer.parseInt(nodesShapes.item(5).getTextContent()),
+						Boolean.valueOf(nodesShapes.item(6).getTextContent()),
+						Boolean.valueOf(nodesShapes.item(7).getTextContent())));
+			}
+		} else {
+			for (int i = 0; i < nodesShapes.getLength(); i++) {
+				NodeList nListShapeElement = nodesShapes.item(i).getChildNodes();
+
+				if (nListShapeElement.getLength() > 0) {
+					String pointString = nListShapeElement.item(1).getTextContent();
+					Point2D point = new Point2D.Double(Double.parseDouble(pointString.split("-")[0]),
+							Double.parseDouble(pointString.split("-")[1]));
+
+					lstShape.add(new Shape(nListShapeElement.item(0).getTextContent(), point,
+							Integer.parseInt(nListShapeElement.item(2).getTextContent()),
+							Integer.parseInt(nListShapeElement.item(3).getTextContent()),
+							Integer.parseInt(nListShapeElement.item(4).getTextContent()),
+							Integer.parseInt(nListShapeElement.item(5).getTextContent()),
+							Boolean.valueOf(nListShapeElement.item(6).getTextContent()),
+							Boolean.valueOf(nListShapeElement.item(7).getTextContent())));
+				}
+			}
 		}
 	}
 
@@ -306,18 +324,14 @@ public class XMLController implements IXMLController {
 	}
 
 	// load xml content to list transition
-	private void LoadXMLToArrayTransition(Document doc, ArrayList<Transition<String>> arrTransition) {
-		NodeList nListTransitions = doc.getElementsByTagName("transition");
-		
-		for (int i = 0; i < nListTransitions.getLength(); i++) {
-			NodeList nListTransitionElement = nListTransitions.item(i).getChildNodes();
-			State source = new State(Boolean.valueOf(nListTransitionElement.item(0).getTextContent().split(",")[0]),
-					Boolean.valueOf(nListTransitionElement.item(0).getTextContent().split(",")[1]));
-			State target = new State(Boolean.valueOf(nListTransitionElement.item(1).getTextContent().split(",")[0]),
-					Boolean.valueOf(nListTransitionElement.item(1).getTextContent().split(",")[1]));
-
-			arrTransition.add(new Transition<String>(source, target, nListTransitionElement.item(2).getTextContent()));
+	private ArrayList<Transition<String>> LoadTransitionsFromEdges(List<Edge> lstEdge,
+			List<Transition<String>> lstTransition, List<State> lstState) {
+		for (Edge edge : lstEdge) {
+			lstTransition.add(new Transition<String>(lstState.get(edge.getSource()),
+					lstState.get(edge.getDestination()), edge.getLabel()));
 		}
+
+		return (ArrayList<Transition<String>>) lstTransition;
 	}
 
 }

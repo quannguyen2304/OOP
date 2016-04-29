@@ -2,25 +2,25 @@ package core;
 
 public class Transition<T> implements ITransition<T> {
 
-	private IState source;
+	private State source;
 
-	private IState target;
+	private State target;
 
 	private T label;
 
-	public Transition(IState source, IState target, T label) {
+	public Transition(State source, State target, T label) {
 		this.source = source;
 		this.target = target;
 		this.label = label;
 	}
 
 	@Override
-	public IState source() {
+	public State source() {
 		return source;
 	}
 
 	@Override
-	public IState target() {
+	public State target() {
 		return target;
 	}
 
